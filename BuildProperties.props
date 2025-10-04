@@ -1,0 +1,48 @@
+﻿<!--
+This project housrs MSBuild properties used by the solution.
+They've been consolidated into this file for your convenience.
+
+The following properties modify certain behaviors in the build
+process, such as changing where the compiled binaries wil be
+outputted to.
+
+To tailor these properties to your local machine, refer to your
+IDE's documentation on how to set MSBuild global properties for
+the project, or manually set the properties using the /p:XXX
+MSBuild flag when you build the project via CLI.
+
+DO NOT MODIFY THIS FILE TO SUIT YOUR ENVIRONMENT. You may end up
+commiting your changes to this file, leading to git churning.
+-->
+<Project>
+    <PropertyGroup>
+        <!--
+        The root directory for your Steam installation. This should
+        be the directory where you'll find the "steamapps" folder.
+        -->
+        <SteamRootDir>..\..\..\..\..\..\..\Program Files (x86)\Steam\</SteamRootDir>
+        
+        <!--
+        The root directory for your game's mods directory.
+        -->
+        <RimWorldModsDir>$(SteamRootDir)\steamapps\common\RimWorld\Mods\</RimWorldModsDir>
+        
+        <!--
+        The root directory the solution's build output(s) will be copied
+        to. This intentionally deosn't specify a version matrix, such as
+        "v1.4" or "1.4" as this is appended automagically later in the
+        build process.
+        -->
+        <RootDestinationDir>$(RimWorldModsDir)\$(Product)\</RootDestinationDir>
+        
+        <!--
+        Whether the prepend the "v" to the version matrix (i.e., "v1.4"
+        versus "1.4"
+        
+        The former would require maintaining a "LoadFolders.xml" file,
+        while the latter will leave the load resolution up to the game.
+        ToolkitCore currently prefers the latter for legacy reasons.
+        -->
+        <PreferPrefixedVersionMatrixes>true</PreferPrefixedVersionMatrixes>
+    </PropertyGroup>
+</Project>

@@ -1,0 +1,32 @@
+﻿<Project>
+    <!-- Compiler metadata -->
+    <PropertyGroup>
+        <LangVersion>preview</LangVersion>
+        <TargetFramework>net472</TargetFramework>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    </PropertyGroup>
+    
+    <!-- Product information -->
+    <PropertyGroup>
+        <Version>1.0.0</Version>
+    </PropertyGroup>
+    
+    <PropertyGroup>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    </PropertyGroup>
+    
+    <PropertyGroup>
+        <Product>ToolkitCore</Product>
+        <Company>Toolkit Community</Company>
+        <Authors>hodlhodl, Toolkit Community</Authors>
+        <Copyright>Copyright (c) $([System.DateTime]::Now.ToString("yyyy")) hodlhodl and contributors</Copyright>
+        
+        <Description>ToolkitCore is a mod for RimWorld that houses the Twitch connection logic for the mod Twitch Toolkit. Originally written by hodlhodl, it's now maintained by the Toolkit Community.</Description>
+        
+        <RepositoryUrl>https://github.com/harleyknd1/toolkitcore</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+    </PropertyGroup>
+    
+    <Import Project="BuildProperties.props" />
+</Project>
