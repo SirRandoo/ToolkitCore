@@ -216,11 +216,11 @@ public sealed class ScopeRegistry : IDisposable
 
         Log.Message($"Performing reauthorization with {scopeStrings.Length} scopes ({newScopes.Length} new)...");
 
-        AuthResult<DeviceAuthSession> sessionResult = await _authService.InitiateAuthFlowAsync(scopeStrings, cancellationToken: cancellationToken).ConfigureAwait(false);
+        Result<DeviceAuthSession> sessionResult = await _authService.InitiateAuthFlowAsync(scopeStrings, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        if (!sessionResult.IsSuccess)
+        if (!sessionResult.Success)
         {
-            ReauthFailed?.Invoke(sessionResult.ErrorMessage);
+            ReauthFailed?.Invoke(sessionResult.Error);
             Interlocked.Decrement(ref _reauthsInProgress);
 
             return;
@@ -228,13 +228,13 @@ public sealed class ScopeRegistry : IDisposable
 
         DeviceAuthSession session = sessionResult.Value;
 
-        var reauthInfo = new ReauthInfo(session.UserCode, session.VerificationUri, newScopes, allScopes, cancellationToken);
+        var reauthInfo = new ReauthInfo(session!.UserCode, session.VerificationUri, newScopes, allScopes, cancellationToken);
 
         ReauthRequired?.Invoke(reauthInfo);
 
-        AuthResult<TokenResponse> tokenResult = await _authService.PollForAuthorizationAsync(session, cancellationToken).ConfigureAwait(false);
+        Result<TokenResponse> tokenResult = await _authService.PollForAuthorizationAsync(session, cancellationToken).ConfigureAwait(false);
 
-        if (tokenResult.IsSuccess)
+        if (tokenResult.Success)
         {
             TokenResponse currentToken = _currentToken;
             Interlocked.CompareExchange(ref _currentToken, tokenResult.Value, currentToken);
@@ -248,8 +248,8 @@ public sealed class ScopeRegistry : IDisposable
         }
         else
         {
-            Log.Error($"Reauthorization failed: {tokenResult.ErrorMessage}");
-            ReauthFailed?.Invoke(tokenResult.ErrorMessage);
+            Log.Error($"Reauthorization failed: {tokenResult.Error}");
+            ReauthFailed?.Invoke(tokenResult.Error);
         }
 
         Interlocked.Decrement(ref _reauthsInProgress);

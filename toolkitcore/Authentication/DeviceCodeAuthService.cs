@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
+using ToolkitCore.Helix;
 using Verse;
 
 namespace ToolkitCore.Authentication;
@@ -35,9 +36,9 @@ public sealed class DeviceCodeAuthService(HttpClient httpClient, string defaultC
     }
 
     /// <summary>Initiates the device code flow and returns the authorization session.</summary>
-    public async Task<AuthResult<DeviceAuthSession>> InitiateAuthFlowAsync(string[] scopes, [CanBeNull] string clientId = null, CancellationToken cancellationToken = default)
+    public async Task<Result<DeviceAuthSession>> InitiateAuthFlowAsync(string[] scopes, [CanBeNull] string clientId = null, CancellationToken cancellationToken = default)
     {
-        if (scopes == null || scopes.Length == 0) return AuthResult<DeviceAuthSession>.Failure("Scopes cannot be null or empty");
+        if (scopes == null || scopes.Length == 0) return Result.Fail<DeviceAuthSession>("Scopes cannot be null or empty");
 
         string effectiveClientId = clientId ?? _defaultClientId;
         FormUrlEncodedContent payload = CreateFormPayload(("client_id", effectiveClientId), ("scopes", string.Join(separator: " ", scopes)));
@@ -50,27 +51,27 @@ public sealed class DeviceCodeAuthService(HttpClient httpClient, string defaultC
             {
                 string errorMessage = await ExtractErrorMessageAsync(response).ConfigureAwait(false) ?? $"HTTP {response.StatusCode}";
                 Log.Error($"Failed to initiate device code flow: {errorMessage}");
-                return AuthResult<DeviceAuthSession>.Failure(errorMessage);
+                return Result.Fail<DeviceAuthSession>(errorMessage);
             }
 
             DeviceCodeResponse deviceCodeResponse = await DeserializeResponseAsync<DeviceCodeResponse>(response).ConfigureAwait(false);
 
-            if (deviceCodeResponse == null) return AuthResult<DeviceAuthSession>.Failure("Failed to deserialize response");
+            if (deviceCodeResponse == null) return Result.Fail<DeviceAuthSession>("Failed to deserialize response");
 
             var session = new DeviceAuthSession(effectiveClientId, deviceCodeResponse.DeviceCode, deviceCodeResponse.UserCode, deviceCodeResponse.VerificationUri,
                 deviceCodeResponse.ExpiresIn, deviceCodeResponse.Interval, scopes);
 
-            return AuthResult<DeviceAuthSession>.Success(session);
+            return Result.Ok(session);
         }
         catch (Exception ex)
         {
             Log.Error($"Exception during device code flow initiation: {ex}");
-            return AuthResult<DeviceAuthSession>.Failure($"Unexpected error: {ex.Message}");
+            return Result.Fail<DeviceAuthSession>($"Unexpected error: {ex.Message}");
         }
     }
 
     /// <summary>Polls for user authorization completion.</summary>
-    public async Task<AuthResult<TokenResponse>> PollForAuthorizationAsync(DeviceAuthSession session, CancellationToken cancellationToken = default)
+    public async Task<Result<TokenResponse>> PollForAuthorizationAsync(DeviceAuthSession session, CancellationToken cancellationToken = default)
     {
         if (session == null) throw new ArgumentNullException(nameof(session));
 
@@ -78,18 +79,18 @@ public sealed class DeviceCodeAuthService(HttpClient httpClient, string defaultC
 
         while (!session.IsExpired)
         {
-            if (cancellationToken.IsCancellationRequested) return AuthResult<TokenResponse>.Failure("Operation canceled by the user");
+            if (cancellationToken.IsCancellationRequested) return Result.Fail<TokenResponse>("Operation canceled by the user");
 
             await Task.Delay(intervalMs, cancellationToken).ConfigureAwait(false);
 
-            AuthResult<TokenResponse> result = await PollForTokenAsync(session, cancellationToken).ConfigureAwait(false);
+            Result<TokenResponse> result = await PollForTokenAsync(session, cancellationToken).ConfigureAwait(false);
 
-            if (result.IsSuccess)
+            if (result.Success)
             {
-                return AuthResult<TokenResponse>.Success(result.Value);
+                return Result.Ok(result.Value);
             }
 
-            switch (result.ErrorCode)
+            switch (result.Error)
             {
                 case AuthorizationPendingError:
                     continue;
@@ -97,25 +98,25 @@ public sealed class DeviceCodeAuthService(HttpClient httpClient, string defaultC
                     intervalMs += 5 * MillisecondsPerSecond;
                     continue;
                 default:
-                    Log.Error($"Authorization polling failed: {result.ErrorMessage}");
-                    return AuthResult<TokenResponse>.Failure(result.ErrorMessage);
+                    Log.Error($"Authorization polling failed: {result.Error}");
+                    return Result.Fail<TokenResponse>(result.Error);
             }
         }
 
-        return AuthResult<TokenResponse>.Failure("Authorization timed out - the device code has expired");
+        return Result.Fail<TokenResponse>("Authorization timed out - the device code has expired");
     }
 
     /// <summary>Convenience method that initiates and waits for the complete auth flow.</summary>
-    public async Task<AuthResult<TokenResponse>> AuthenticateAsync(string[] scopes, [CanBeNull] string clientId = null, CancellationToken cancellationToken = default)
+    public async Task<Result<TokenResponse>> AuthenticateAsync(string[] scopes, [CanBeNull] string clientId = null, CancellationToken cancellationToken = default)
     {
-        AuthResult<DeviceAuthSession> sessionResult = await InitiateAuthFlowAsync(scopes, clientId, cancellationToken).ConfigureAwait(false);
+        Result<DeviceAuthSession> sessionResult = await InitiateAuthFlowAsync(scopes, clientId, cancellationToken).ConfigureAwait(false);
 
-        if (!sessionResult.IsSuccess) return AuthResult<TokenResponse>.Failure(sessionResult.ErrorMessage);
+        if (!sessionResult.Success) return Result.Fail<TokenResponse>(sessionResult.Error);
 
         return await PollForAuthorizationAsync(sessionResult.Value, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<AuthResult<TokenResponse>> PollForTokenAsync(DeviceAuthSession session, CancellationToken cancellationToken)
+    private async Task<Result<TokenResponse>> PollForTokenAsync(DeviceAuthSession session, CancellationToken cancellationToken)
     {
         FormUrlEncodedContent payload = CreateFormPayload(("client_id", session.ClientId), ("device_code", session.DeviceCode), ("grant_type", DeviceCodeGrantType),
             ("scopes", string.Join(separator: " ", session.Scopes)));
@@ -127,20 +128,20 @@ public sealed class DeviceCodeAuthService(HttpClient httpClient, string defaultC
             if (response.StatusCode == HttpStatusCode.OK)
             {
                 TokenResponse tokenResponse = await DeserializeResponseAsync<TokenResponse>(response).ConfigureAwait(false);
-                return tokenResponse != null ? AuthResult<TokenResponse>.Success(tokenResponse) : AuthResult<TokenResponse>.Failure("Failed to deserialize token response");
+                return tokenResponse != null ? Result.Ok(tokenResponse) : Result.Fail<TokenResponse>("Failed to deserialize token response");
             }
 
-            ErrorResponse errorResponse = await DeserializeResponseAsync<ErrorResponse>(response).ConfigureAwait(false);
+            HelixErrorResponse errorResponse = await DeserializeResponseAsync<HelixErrorResponse>(response).ConfigureAwait(false);
 
             if (errorResponse != null) Log.Message($"Polling for token failed: {errorResponse.Message}");
             return errorResponse != null
-                ? AuthResult<TokenResponse>.Failure(errorResponse.Message, errorResponse.Message)
-                : AuthResult<TokenResponse>.Failure($"HTTP {response.StatusCode}");
+                ? Result.Fail<TokenResponse>(errorResponse.Message, errorResponse.Message)
+                : Result.Fail<TokenResponse>($"HTTP {response.StatusCode}");
         }
         catch (Exception ex)
         {
             Log.Error($"Exception in PollForTokenAsync: {ex}");
-            return AuthResult<TokenResponse>.Failure($"Request failed: {ex.Message}");
+            return Result.Fail<TokenResponse>($"Request failed: {ex.Message}");
         }
     }
 
@@ -166,7 +167,7 @@ public sealed class DeviceCodeAuthService(HttpClient httpClient, string defaultC
 
     private static async Task<string> ExtractErrorMessageAsync(HttpResponseMessage response)
     {
-        ErrorResponse errorResponse = await DeserializeResponseAsync<ErrorResponse>(response).ConfigureAwait(false);
+        HelixErrorResponse errorResponse = await DeserializeResponseAsync<HelixErrorResponse>(response).ConfigureAwait(false);
         return errorResponse?.Message;
     }
 }
