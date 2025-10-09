@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using ToolkitCore.Utilities;
+using ToolkitCore.Windows;
 using UnityEngine;
 using Verse;
 
@@ -7,6 +10,7 @@ namespace ToolkitCore
 {
     public class ToolkitCoreSettings : ModSettings
     {
+        public static string client_id = "9wyhma4y3tmx1haf19owy0u8jh7paj";
         public static string channel_username = "";
         public static string bot_username = "";
         public static string oauth_token = "";
@@ -61,7 +65,7 @@ namespace ToolkitCore
             }
             if (Widgets.ButtonText(new Rect(val4.x + val4.width + 10f, val3.y, 140f, verticalHeight), "New OAuth Token", true, true, true))
             {
-                Application.OpenURL("https://www.twitchapps.com/tmi/");
+                Find.WindowStack.Add(Window_DeviceCodeFlow.CreateInstance());
             }
             val3.y = val3.y + verticalSpacing;
             if (Widgets.ButtonText(val3, "Paste from Clipboard", true, true, true))
@@ -119,6 +123,7 @@ namespace ToolkitCore
             Scribe_Values.Look<bool>(ref ToolkitCoreSettings.allowWhispers, "allowWhispers", true, false);
             Scribe_Values.Look<bool>(ref ToolkitCoreSettings.sendMessageToChatOnStartup, "sendMessageToChatOnStartup", true, false);
             Scribe_Values.Look<bool>(ref ToolkitCoreSettings.forceWhispers, "forceWhispers", false, false);
+            Scribe_Values.Look<string>(ref ToolkitCoreSettings.client_id, "clientId", "9wyhma4y3tmx1haf19owy0u8jh7paj");
         }
 
         public bool canConnectOnStartup()
