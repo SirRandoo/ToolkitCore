@@ -47,7 +47,11 @@ public sealed class ScopeRegistry : IDisposable
     }
 
     /// <summary>Gets the current access token, or null if not authenticated.</summary>
-    public TokenResponse CurrentToken => _currentToken;
+    public TokenResponse CurrentToken
+    {
+        get => _currentToken;
+        internal set => _currentToken = value;
+    }
 
     /// <summary>Returns true if there are any outbound requests (e.g. reauth) in progress.</summary>
     public bool HasOutboundRequests => _reauthsInProgress > 0;
@@ -238,6 +242,10 @@ public sealed class ScopeRegistry : IDisposable
         {
             TokenResponse currentToken = _currentToken;
             Interlocked.CompareExchange(ref _currentToken, tokenResult.Value, currentToken);
+            
+            // For backwards compatibility, update the field in the settings class.
+            string snapshot = ToolkitCoreSettings.oauth_token;
+            Interlocked.CompareExchange(ref ToolkitCoreSettings.oauth_token, tokenResult.Value!.AccessToken, snapshot);
 
             ConcurrentStringHashSet lastAuthenticatedScopes = _lastAuthenticatedScopes;
             ConcurrentStringHashSet currentAuthenticatedScopes = new(scopeStrings.ToDictionary(s => s, _ => new object()));

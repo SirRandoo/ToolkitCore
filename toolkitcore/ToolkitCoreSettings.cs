@@ -13,7 +13,10 @@ namespace ToolkitCore
         public static string client_id = "9wyhma4y3tmx1haf19owy0u8jh7paj";
         public static string channel_username = "";
         public static string bot_username = "";
+
+        [Obsolete("Use ScopeRegistry.CurrentToken.AccessToken instead.")]
         public static string oauth_token = "";
+
         public static bool connectOnGameStartup = false;
         public static bool allowWhispers = true;
         public static bool forceWhispers = false;
