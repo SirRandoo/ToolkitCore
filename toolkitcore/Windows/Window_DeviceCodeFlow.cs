@@ -144,24 +144,6 @@ internal sealed class Window_DeviceCodeFlow : Window
     }
 
     /// <inheritdoc />
-    public override void PreOpen()
-    {
-        base.PreOpen();
-        
-        Task.Run(async() =>
-        {
-            try
-            {
-                await GlobalResources.ScopeRegistry.InitialAuthenticateAsync(cancellationToken: _cancellationTokenSource.Token);
-            }
-            catch (Exception e)
-            {
-                Log.Message($"Failed to authenticate: {e.Message}");
-            }
-        });
-    }
-
-    /// <inheritdoc />
     public override void PreClose()
     {
         base.PreClose();
