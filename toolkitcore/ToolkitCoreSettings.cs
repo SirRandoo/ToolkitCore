@@ -68,7 +68,9 @@ namespace ToolkitCore
             }
             if (Widgets.ButtonText(new Rect(val4.x + val4.width + 10f, val3.y, 140f, verticalHeight), "New OAuth Token", true, true, true))
             {
-                Find.WindowStack.Add(Window_DeviceCodeFlow.CreateInstance());
+                var window = Window_DeviceCodeFlow.CreateInstance();
+                Find.WindowStack.Add(window);
+                Task.Run(async () => await GlobalResources.ScopeRegistry.InitialAuthenticateAsync(window.CancellationTokenSource.Token));
             }
             val3.y = val3.y + verticalSpacing;
             if (Widgets.ButtonText(val3, "Paste from Clipboard", true, true, true))

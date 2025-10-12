@@ -1,7 +1,4 @@
-using System;
-using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using ToolkitCore.Authentication;
 using UnityEngine;
 using Verse;
@@ -10,15 +7,16 @@ namespace ToolkitCore.Windows;
 
 internal sealed class Window_DeviceCodeFlow : Window
 {
-    private ReauthInfo _info;
     private Page _currentPage = Page.Welcome;
+    private ReauthInfo _info;
     private bool _mocking;
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private string _statusMessage = "ToolkitCore_DeviceCodeFlowInitializing".TranslateSimple();
 
     private Window_DeviceCodeFlow()
     {
     }
+
+    internal CancellationTokenSource CancellationTokenSource { get; } = new();
 
     /// <inheritdoc />
     public override void DoWindowContents(Rect inRect)
@@ -37,6 +35,9 @@ internal sealed class Window_DeviceCodeFlow : Window
                 break;
             case Page.Finished:
                 DrawFinishedScreen(inRect);
+                break;
+            case Page.WaitingRoom:
+                DrawWaitingRoomScreen(inRect);
                 break;
             case Page.Pairing:
                 DrawPairingScreen(inRect);
@@ -58,15 +59,26 @@ internal sealed class Window_DeviceCodeFlow : Window
         GUI.EndGroup();
     }
 
+    private void DrawWaitingRoomScreen(Rect region)
+    {
+        string initializingMessage = "ToolkitCore_DeviceCodeFlowInitializing".TranslateSimple();
+        string ellipses = GenText.MarchingEllipsis();
+        
+        Text.Anchor = TextAnchor.MiddleCenter;
+        Widgets.Label(region.TopHalf(), initializingMessage + ellipses);
+        if (_statusMessage != initializingMessage) Widgets.Label(region.BottomHalf(), _statusMessage);
+        Text.Anchor = TextAnchor.UpperLeft;
+    }
+
     private void DrawWaywardTravelerMessage(Rect region)
     {
         var preambleRegion = new Rect(region.x, region.y, region.width, UiConstants.LineHeight * 2f);
         var restartRegion = new Rect(region.x, region.y + UiConstants.LineHeight * 2f, region.width, UiConstants.LineHeight * 2f);
-        
+
         Text.Anchor = TextAnchor.MiddleCenter;
-        Widgets.Label(preambleRegion, label: "ToolkitCore_DeviceCodeFlowWaywardTraveller".TranslateSimple());
+        Widgets.Label(preambleRegion, "ToolkitCore_DeviceCodeFlowWaywardTraveller".TranslateSimple());
         Text.Anchor = TextAnchor.UpperLeft;
-        
+
         if (Widgets.ButtonText(restartRegion, "ToolkitCore_DeviceCodeFlowRestart".TranslateSimple())) _currentPage = Page.Welcome;
     }
 
@@ -76,10 +88,10 @@ internal sealed class Window_DeviceCodeFlow : Window
         var noticeRegion = new Rect(region.x, region.y + UiConstants.LineHeight * 5f, region.width, UiConstants.LineHeight * 2f);
 
         Text.Anchor = TextAnchor.MiddleCenter;
-        Widgets.Label(preambleRegion, label: "ToolkitCore_DeviceCodeFlowWelcomePreamble".TranslateSimple());
+        Widgets.Label(preambleRegion, "ToolkitCore_DeviceCodeFlowWelcomePreamble".TranslateSimple());
 
         GUI.color = ColorLibrary.RedReadable;
-        Widgets.Label(noticeRegion, label: "ToolkitCore_DeviceCodeFlowWarning".TranslateSimple());
+        Widgets.Label(noticeRegion, "ToolkitCore_DeviceCodeFlowWarning".TranslateSimple());
         GUI.color = Color.white;
 
         Text.Anchor = TextAnchor.UpperLeft;
@@ -93,7 +105,7 @@ internal sealed class Window_DeviceCodeFlow : Window
         var statusMessageRegion = new Rect(region.x, region.y + UiConstants.LineHeight * 4f, region.width, UiConstants.LineHeight * 5f);
 
         Text.Anchor = TextAnchor.MiddleCenter;
-        Widgets.Label(preambleRegion, label: "ToolkitCore_DeviceCodeFlowNavigateToUrl".TranslateSimple());
+        Widgets.Label(preambleRegion, "ToolkitCore_DeviceCodeFlowNavigateToUrl".TranslateSimple());
         Widgets.Label(deviceCodeRegion, "ToolkitCore_DeviceCodeFlowCode".Translate(_info.UserCode));
         Text.Anchor = TextAnchor.UpperLeft;
 
@@ -102,7 +114,7 @@ internal sealed class Window_DeviceCodeFlow : Window
 
         Text.Anchor = TextAnchor.MiddleCenter;
         GUI.color = ColorLibrary.Teal;
-        Widgets.Label(statusMessageRegion, _statusMessage);
+        Widgets.LabelEllipses(statusMessageRegion, _statusMessage);
         GUI.color = Color.white;
         Text.Anchor = TextAnchor.UpperLeft;
     }
@@ -117,7 +129,7 @@ internal sealed class Window_DeviceCodeFlow : Window
     private void DrawFailedScreen(Rect region)
     {
         Text.Anchor = TextAnchor.MiddleCenter;
-        Widgets.Label(region.TopHalf(), label: "ToolkitCore_DeviceCodeFlowFailed".TranslateSimple());
+        Widgets.Label(region.TopHalf(), "ToolkitCore_DeviceCodeFlowFailed".TranslateSimple());
         if (!string.IsNullOrWhiteSpace(_statusMessage)) Widgets.Label(region.BottomHalf(), "ToolkitCore_DeviceCodeFlowErrorMessage".Translate(_statusMessage));
         Text.Anchor = TextAnchor.UpperLeft;
     }
@@ -126,7 +138,7 @@ internal sealed class Window_DeviceCodeFlow : Window
     {
         if (_currentPage is Page.Finished)
         {
-            if (Widgets.ButtonText(region, label: "CloseButton".TranslateSimple())) Close();
+            if (Widgets.ButtonText(region, "CloseButton".TranslateSimple())) Close();
             return;
         }
 
@@ -136,11 +148,11 @@ internal sealed class Window_DeviceCodeFlow : Window
 
         if (HasNextPage())
         {
-            if (Widgets.ButtonText(nextButtonRegion, label: "Next".TranslateSimple())) NavigateToNextPage();
+            if (Widgets.ButtonText(nextButtonRegion, "Next".TranslateSimple())) NavigateToNextPage();
             nextButtonRegion.x -= 155;
         }
 
-        if (HasPreviousPage() && Widgets.ButtonText(nextButtonRegion, label: "Back".TranslateSimple())) NavigateToPreviousPage();
+        if (HasPreviousPage() && Widgets.ButtonText(nextButtonRegion, "Back".TranslateSimple())) NavigateToPreviousPage();
     }
 
     /// <inheritdoc />
@@ -152,10 +164,10 @@ internal sealed class Window_DeviceCodeFlow : Window
         GlobalResources.ScopeRegistry.ReauthCompleted -= UpdateOAuthToken;
 
         if (!GlobalResources.ScopeRegistry.HasOutboundRequests) return;
-        
+
         Log.Message("Cancelling outstanding reauth requests...");
-        _cancellationTokenSource.Cancel();
-        _cancellationTokenSource.Dispose();
+        CancellationTokenSource.Cancel();
+        CancellationTokenSource.Dispose();
     }
 
     private void UpdateStatusMessage(string message)
@@ -180,7 +192,7 @@ internal sealed class Window_DeviceCodeFlow : Window
     {
         return message switch
         {
-            "authentication_pending" => "ToolkitCore_DeviceCodeFlowPending".TranslateSimple(),
+            "authentication_pending" => "ToolkitCore_DeviceCodeFlowPending".TranslateSimple() + GenText.MarchingEllipsis(),
             "invalid device code"    => "ToolkitCore_DeviceCodeFlowInvalid".TranslateSimple(),
             _                        => string.Empty
         };
@@ -225,7 +237,7 @@ internal sealed class Window_DeviceCodeFlow : Window
 
         _currentPage = _currentPage switch
         {
-            Page.Welcome => Page.Pairing,
+            Page.Welcome => _info == null ? Page.WaitingRoom : Page.Pairing,
             Page.Pairing => Page.Finished,
             _            => _currentPage
         };
@@ -254,9 +266,10 @@ internal sealed class Window_DeviceCodeFlow : Window
 
         return _currentPage switch
         {
-            Page.Welcome => true,
-            Page.Pairing => true,
-            _            => false
+            Page.Welcome     => true,
+            Page.WaitingRoom => _info != null,
+            Page.Pairing     => true,
+            _                => false
         };
     }
 
@@ -275,6 +288,7 @@ internal sealed class Window_DeviceCodeFlow : Window
     private enum Page
     {
         Welcome,
+        WaitingRoom,
         Pairing,
         Failed,
         Finished

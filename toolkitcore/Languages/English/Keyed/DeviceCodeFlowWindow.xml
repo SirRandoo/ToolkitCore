@@ -10,7 +10,7 @@
     <ToolkitCore_DeviceCodeFlowRestart>Go back to the beginning</ToolkitCore_DeviceCodeFlowRestart>
     
     <ToolkitCore_DeviceCodeFlowNavigateToUrl>Please visit the following URL in your browser to authenticate with Twitch:</ToolkitCore_DeviceCodeFlowNavigateToUrl>
-    <ToolkitCore_DeviceCodeFlowInitializing>Requesting device code from Twitch...</ToolkitCore_DeviceCodeFlowInitializing>
+    <ToolkitCore_DeviceCodeFlowInitializing>Requesting device code from Twitch</ToolkitCore_DeviceCodeFlowInitializing>
     <ToolkitCore_DeviceCodeFlowPending>Waiting for authentication</ToolkitCore_DeviceCodeFlowPending>
     <ToolkitCore_DeviceCodeFlowInvalid>The code generated was already used; restart the authentication process to continue</ToolkitCore_DeviceCodeFlowInvalid>
 </LanguageMetadata>
